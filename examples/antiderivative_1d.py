@@ -48,3 +48,11 @@ def data():
     solution = dfx.diffeqsolve(term, solver, t0=xspan[0], t1=xspan[1], dt0=(xspan[1]-xspan[0])/m, y0=v0)
     
 # %%
+
+## Interpolation
+# Sample code for interpolation
+t = jnp.linspace(0, 2*jnp.pi, 100)
+y = jnp.sin(t)
+f = dfx.LinearInterpolation(t, y)
+
+plt.plot(t, f.evaluate(t))
