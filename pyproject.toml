@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "deeponetx"
+version = "0.1.0"
+description = ""
+authors = ["Shao-Ting Chiu <stchiu@email.tamu.edu>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+jax = {extras = ["cuda12"], version = "^0.4.30"}
+equinox = "^0.11.4"
+pytest = "^8.2.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
