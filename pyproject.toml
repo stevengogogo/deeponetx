@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "deeponetx"
+version = "0.1.0"
+description = ""
+authors = ["Shao-Ting Chiu <stchiu@email.tamu.edu>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+jax = {extras = ["cuda12"], version = "^0.4.30"}
+equinox = "^0.11.4"
+optax = "^0.2.2"
+tqdm = "^4.66.4"
+
+
+[tool.poetry.group.extras.dependencies]
+matplotlib = "^3.9.0"
+pytest = "^8.2.2"
+diffrax = "^0.6.0"
+gstools = "^1.5.2"
+scipy = "^1.14.0"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
