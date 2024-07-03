@@ -10,46 +10,74 @@ import numpy as np
 import diffrax as dfx
 import matplotlib.pyplot as plt
 from gstools import SRF, Gaussian
+from typing import NamedTuple
 import sys 
 import os
 sys.path.append('.')
 import deeponetx
+
+
+class Data(NamedTuple):
+    us: jnp.ndarray # conditioned function (sampled) [nsample, ngrid]
+    ys: jnp.ndarray # location y [nsample, locations]
+    Guys: jnp.array # output of operator at location y [nsample, locations]
+    def __getitem__(self, key):
+        """Get subset of data
+        """
+        return Data(self.us[key], self.ys[key], self.Guys[key])
 
 def sample_grf1d(m, tspan, *, key:int):
     model = Gaussian(dim=1, var=1, len_scale=10.)
     ts = np.linspace(tspan[0], tspan[1], m)
     srf = SRF(model, seed=key)
     vs = srf.structured(range(m))
-    Vfn = dfx.LinearInterpolation(ts, vs)
-    return Vfn.evaluate
+    return vs
+    #Vfn = dfx.LinearInterpolation(ts, vs)
+    #return Vfn.evaluate
 
-def ode(t, v, args):
-    return args(t)
-
-def data():
+def get_data():
     """Create align data
     """
     m = 100 # resolution
-    xspan = [0.,1.]
+    tspan = [0.,1.]
     n_samp = 1150
 
-    Vs = [sample_grf1d(m, xspan, key=i) for i in range(n_samp)]
+    Vs = jnp.array([sample_grf1d(m, tspan, key=i) for i in range(n_samp)])
 
+    def solve(vs):
+        """Solve ODE for given GRF function
+        """
+        # Observe points
+        v0 = 0. 
+        ts = jnp.linspace(tspan[0], tspan[1], len(vs))
+        # interpolation
+        vfn = dfx.LinearInterpolation(ts, vs).evaluate
+
+        # ODE setting 
+        def ode(t, v, args):
+            return vfn(t)
+        
+        # solve setting
+        term = dfx.ODETerm(ode)
+        solver = dfx.Dopri5()
+        # solve
+        sol = dfx.diffeqsolve(term, solver, t0=tspan[0], t1=tspan[1], dt0=(tspan[1]-tspan[0])/m, y0=v0, saveat=dfx.SaveAt(ts=ts))
+
+        vs = vfn(ts)
+
+        return sol, vs
     # Solve on VS
-    v0 = 0.
-    term = dfx.ODETerm(ode)
-    solver = dfx.Dopri5()
-    solve = lambda args: dfx.diffeqsolve(term, solver, t0=xspan[0], t1=xspan[1], dt0=(xspan[1]-xspan[0])/m, y0=v0, args=args)
-
-    solutions = [solve(Vs[i]) for i in range(n_samp)]
-    
-    return solutions
+    sols, vs = jax.vmap(solve, in_axes=(0,))(Vs)
+    return Data(
+        us = vs, # conditioned functions
+        ys = sols.ts, # location y
+        Guys = sols.ys # output of operator at location y
+    )
 # %%
+def main():
 
-## Interpolation
-# Sample code for interpolation
-t = jnp.linspace(0, 2*jnp.pi, 100)
-y = jnp.sin(t)
-f = dfx.LinearInterpolation(t, y)
+    data = get_data()
 
-plt.plot(t, f.evaluate(t))
+    data_train = data[:150]
+    data_test = data[150:]
+    
