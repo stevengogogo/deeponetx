@@ -2,7 +2,8 @@ import jax
 import jax.numpy as jnp
 from deeponetx.data import kernels
 from jax import config
-
+from jax.experimental import enable_x64
+#config.update("jax_enable_x64", True)
 def test_kernel():
     ks = [kernels.SquaredExponential(0.5, 1.0),
         kernels.RationalQuadratic(0.5, 1.0, 1.0)
@@ -34,15 +35,15 @@ def test_kernel():
                 al = jax.vmap(i+j)(x,y)
 
 def test_cov_matrix():
+    # Try cholesky
     k = kernels.SquaredExponential(0.5, 1.0)
     x = jnp.linspace(0,1,num=1000)
-    
-    m_cov = kernels.cov_matrix(k, x, jitter=1e-4)
+
+    with enable_x64(): #temperary for float64
+        x_ = x.astype(jnp.float64) #convert to float64
+        m_cov = kernels.cov_matrix(k, x_, jitter=1e-13).astype(jnp.float64)
+        L = jnp.linalg.cholesky(m_cov, upper=False)
 
     assert m_cov.shape[0] == len(x)
     assert m_cov.shape[1] == len(x)
-
-    # Try cholesky
-    L = jnp.linalg.cholesky(m_cov, upper=False)
-
     assert not jnp.isnan(L).any()

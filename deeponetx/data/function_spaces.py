@@ -7,11 +7,12 @@ import abc
 import jax.numpy as np
 import diffrax as dfx
 import equinox as eqx
+from jax.experimental import enable_x64
 from .kernels import AbstractKernel, cov_matrix
 
 class FunctionSpace(eqx.Module):
     @abc.abstractmethod 
-    def random(self, size:int, *, key):
+    def sample(self, size:int, *, key):
         """Generate feature vectors of random functions
 
         Args:
@@ -28,13 +29,20 @@ class GaussianRandomField(FunctionSpace):
     xs: np.ndarray # sensor points
     L: np.ndarray # covariance matrix
 
-    def __init__(self, kernel:AbstractKernel, xs:jnp.ndarray, jitter:float=1e-4):
+    def __init__(self, kernel:AbstractKernel, xs:jnp.ndarray, jitter:float=1e-13):
         self.kernel = kernel 
         self.xs = xs 
-        K = cov_matrix(kernel, xs, jitter=jitter) # covariance matrix
-        self.L = jnp.linalg.cholesky(K, upper=False)
+        with enable_x64():
+            xs_ = xs.astype(jnp.float64)
+            K = cov_matrix(kernel, xs_, jitter=jitter) # covariance matrix
+            L = jnp.linalg.cholesky(K, upper=False)
+
+        L = L.astype(jnp.float32)
+        if jnp.isnan(L).any():
+            raise ValueError("Cholesky decomposition failed")
+        self.L = L
     
-    def random(self, n_func:int, *, key):
+    def sample(self, n_func:int, *, key):
         """Generate samples from random functions
 
         Args:
@@ -45,4 +53,4 @@ class GaussianRandomField(FunctionSpace):
             A jnp.array of shape (`n_func`, len(xs))
         """
         u = jax.random.normal(key, shape=(len(self.xs),n_func))
-        return jnp.dot(self.L.T, u).T
+        return (self.L @ u).T

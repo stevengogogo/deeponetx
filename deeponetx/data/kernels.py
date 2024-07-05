@@ -77,7 +77,7 @@ def cov_matrix(kernel: AbstractKernel, xs: jnp.ndarray, jitter:float=0.):
     m_cov = jax.vmap(jax.vmap(kernel, 
                     in_axes=(None, 0)), 
             in_axes=(0,None))(xs, xs)
-    m_cov += jitter * jnp.eye(len(xs))
+    m_cov = m_cov + jitter * jnp.eye(len(xs))
     return m_cov
         
 
