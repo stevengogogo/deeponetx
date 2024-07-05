@@ -8,15 +8,24 @@ import abc
 from jax.experimental import checkify
 
 class AbstractKernel(eqx.Module):
+    """Kernel Function"""
     @abc.abstractmethod
     def __call__(self, x:float, y:float):
         raise NotImplementedError
 
+    def __add__(self, k):
+        """Sum of two kernels"""
+        return SumKernel(self, k)
+    
+    def __mul__(self, k):
+        """Product of two kernels"""
+        return ProductKernel(self, k)
+    
 class SquaredExponential(AbstractKernel):
     length_scale: float
     signal_stddev: float
 
-    @eqx.filter_jit
+    @jax.jit
     def __call__(self, x:float, y:float):
         return self.signal_stddev**2 * jnp.exp(- (x-y)**2 / (2*self.length_scale**2))
 
@@ -33,7 +42,7 @@ class RationalQuadratic(AbstractKernel):
         self.length_scale = length_scale
         self.signal_stddev = signal_stddev
     
-    @eqx.filter_jit 
+    @jax.jit
     def __call__(self, x:float, y:float):
         return self.signal_stddev**2 * (1 + (x-y)**2 / (2*self.mixture*self.length_scale**2))**(-self.mixture)
 
@@ -42,7 +51,7 @@ class SumKernel(AbstractKernel):
     kernel1: AbstractKernel
     kernel2: AbstractKernel
 
-    @eqx.filter_jit
+    @jax.jit
     def __call__(self, x:float, y:float):
         return self.kernel1(x,y) + self.kernel2(x,y)
 
@@ -51,10 +60,25 @@ class ProductKernel(AbstractKernel):
     kernel1: AbstractKernel
     kernel2: AbstractKernel
 
-    @eqx.filter_jit
+    @jax.jit
     def __call__(self, x:float, y:float):
         return self.kernel1(x,y) * self.kernel2(x,y)
 
+# Helper function 
+def cov_matrix(kernel: AbstractKernel, xs: jnp.ndarray, jitter:float=0.):
+    """Covariance matrix
+    Arg: 
+        kernel (AbstractKernel): Kernel function
+        xs (jnp.ndarray): Sensor points
+        jitter: small value add to the diagnal of the covariance matrix for numerical stability
+    Return: 
+        A jnp.ndarray of shape (len(xs), len(xs))
+    """
+    m_cov = jax.vmap(jax.vmap(kernel, 
+                    in_axes=(None, 0)), 
+            in_axes=(0,None))(xs, xs)
+    m_cov += jitter * jnp.eye(len(xs))
+    return m_cov
         
 
 
