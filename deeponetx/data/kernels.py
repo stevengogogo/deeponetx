@@ -21,13 +21,18 @@ class AbstractKernel(eqx.Module):
         """Product of two kernels"""
         return ProductKernel(self, k)
     
+    @jax.jit
+    def r(self, x:float, y:float):
+        """Distance of `x` and `y` by norm 2"""
+        return jnp.sum((x-y)**2)
+    
 class SquaredExponential(AbstractKernel):
     length_scale: float
     signal_stddev: float
 
     @jax.jit
     def __call__(self, x:float, y:float):
-        return self.signal_stddev**2 * jnp.exp(- (x-y)**2 / (2*self.length_scale**2))
+        return self.signal_stddev**2 * jnp.exp(- self.r(x,y)/ (2*self.length_scale**2))
 
 class RationalQuadratic(AbstractKernel):
     mixture: float # alpha > 0
@@ -44,7 +49,7 @@ class RationalQuadratic(AbstractKernel):
     
     @jax.jit
     def __call__(self, x:float, y:float):
-        return self.signal_stddev**2 * (1 + (x-y)**2 / (2*self.mixture*self.length_scale**2))**(-self.mixture)
+        return self.signal_stddev**2 * (1 + self.r(x,y) / (2*self.mixture*self.length_scale**2))**(-self.mixture)
 
 class SumKernel(AbstractKernel):
     """Kernels summ by two kernels"""
