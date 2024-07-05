@@ -28,10 +28,24 @@ class GaussianRandomField(FunctionSpace):
     kernel: AbstractKernel
     xs: np.ndarray # sensor points
     L: np.ndarray # covariance matrix
+    dim: int # dimension of the function space
+    N: int # number of sensor points
 
     def __init__(self, kernel:AbstractKernel, xs:jnp.ndarray, jitter:float=1e-13):
+        """_summary_
+
+        Args:
+            kernel (AbstractKernel): _description_
+            xs (jnp.ndarray): shape ([(coordinate), npoints]). for 1D shape (npoints,); for 2D shape (npoints, 2)
+            jitter (float, optional): _description_. Defaults to 1e-13.
+
+        Raises:
+            ValueError: _description_
+        """
         self.kernel = kernel 
         self.xs = xs 
+        self.dim = len(xs.shape)
+        self.N = xs.shape[0]
         with enable_x64():
             xs_ = xs.astype(jnp.float64)
             K = cov_matrix(kernel, xs_, jitter=jitter) # covariance matrix
@@ -52,5 +66,5 @@ class GaussianRandomField(FunctionSpace):
         Returns:
             A jnp.array of shape (`n_func`, len(xs))
         """
-        u = jax.random.normal(key, shape=(len(self.xs),n_func))
+        u = jax.random.normal(key, shape=(self.N,n_func))
         return (self.L @ u).T
