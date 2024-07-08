@@ -1,26 +1,30 @@
 """
-Data type. Inspired from https://github.com/lululxvi/deepxde/blob/master/deepxde/data/data.py
+Data type. Inspired from https://github.com/PredictiveIntelligenceLab/Physics-informed-DeepONets/blob/main/Diffusion-reaction/DeepONet_DR.ipynb
 """
 import equinox as eqx
+import jax.numpy as jnp
+import jax.random as jr
+from typing import NamedTuple
 import abc 
 
-class Data(eqx.Module):
-    """Data base class"""
+class DataDeepONet(NamedTuple):
+    """Data for DeepONet
 
-    def losses(self, targets, outputs, loss_fn, inputs, model, **kwargs):
-        "Return a list of losses. i.e. boundary losses, inital loss"
-        raise NotImplementedError("Data.losses is not implemented.")
+    Args:
+        - `input_branch`: jnp.ndarray # conditioned function (sampled) [nsample, ngrid]
+        - `input_trunk`: jnp.ndarray # location y [nsample, locations]
+        - `output`: jnp.array # output of operator at location y [nsample, locations]
+    """
+    input_branch: jnp.ndarray # input sample
+    input_trunk: jnp.ndarray # location
+    output: jnp.array # labeled data evulated at y (solution measurements, BC/IC cond
+    def __getitem__(self, index):
+        """Get subset of data
+        """
+        return DataDeepONet(self.input_branch[index], self.input_trunk, self.output[index])
     
-    def losses_train(self, targets, outputs, loss_fn, inputs, model, **kwargs):
-        return self.losses(targets, outputs, loss_fn, inputs, model)
-    
-    def losses_test(self, targets, outputs, loss_fn, inputs, model, **kwargs):
-        return self.losses(targets, outputs, loss_fn, inputs, model)
-    
-    @abc.abstractmethod 
-    def train_next_batch(self, batch_size=None):
-        "Return a training dataset of the size `batch_size`"
-    
-    @abc.abstractmethod 
-    def test(self):
-        "Return a test dataset"
+    def sample(self, batch_size:int, key):
+        """Sample data
+        """
+        idx = jr.choice(key, self.input_branch.shape[0], (batch_size,), replace=False)
+        return self[idx]

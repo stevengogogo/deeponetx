@@ -2,26 +2,10 @@ import jax
 import jax.numpy as jnp
 import optax 
 import equinox as eqx
-from typing import NamedTuple
 from tqdm.auto import tqdm
 import numpy as np
 from .nn import AbstractDeepONet
-
-class DataDeepONet(NamedTuple):
-    """Data for DeepONet
-
-    Args:
-        - `input_branch`: jnp.ndarray # conditioned function (sampled) [nsample, ngrid]
-        - `input_trunk`: jnp.ndarray # location y [nsample, locations]
-        - `output`: jnp.array # output of operator at location y [nsample, locations]
-    """
-    input_branch: jnp.ndarray
-    input_trunk: jnp.ndarray
-    output: jnp.array
-    def __getitem__(self, key):
-        """Get subset of data
-        """
-        return DataDeepONet(self.input_branch[key], self.input_trunk, self.output[key])
+from data.data import DataDeepONet
 
 def loss_fn(model:AbstractDeepONet, data:DataDeepONet):
 
