@@ -16,6 +16,7 @@ import deeponetx as dtx
 from deeponetx import nn
 from deeponetx import train as traindtx
 from deeponetx.data import function_spaces, kernels
+from deeponetx.data.data import DataDeepONet
 
 def sample_grf1d(n_samp, ts, key:int):
     kernel = kernels.SquaredExponential(length_scale=0.1, signal_stddev=1.)
@@ -24,13 +25,12 @@ def sample_grf1d(n_samp, ts, key:int):
     print(vs.shape)
     return vs
 
-def get_data(key=0):
+def get_data(key:jr.PRNGKey):
     """Create align data
     """
     m = 100 # resolution
-    ts = jnp.linspace(0, 1, num=m)
+    ts = jnp.linspace(0, 1, num=m) # sensor points
     n_samp = 1150
-    key = jr.PRNGKey(0)
     Vs = sample_grf1d(n_samp, ts, key=key)
 
     def solve(vs):
@@ -57,9 +57,9 @@ def get_data(key=0):
     # Solve on VS
     sols, vs = jax.vmap(solve, in_axes=(0,))(Vs)
     ys = sols.ts[0].reshape(-1, 1)
-    return traindtx.DataDeepONet(vs, ys, sols.ys)
+    return DataDeepONet(vs, ys, sols.ys)
 
-def visualize(net:dtx.nn.AbstractDeepONet, data:dtx.train.DataDeepONet, i=0):
+def visualize(net:dtx.nn.AbstractDeepONet, data:DataDeepONet, i=0):
     fig, ax = plt.subplots()
     ax.plot(data.input_trunk[:,0], data.input_branch[i,:], label="input")
     ax.plot(data.input_trunk[:,i], data.output[i,:], label="Antiderivative (truth)" )
@@ -87,7 +87,7 @@ def main():
     key = jr.PRNGKey(0)
 
     # Create dta
-    data = get_data()
+    data = get_data(key)
     data_train = data[:500]
     data_test = data[500:]
 

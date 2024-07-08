@@ -31,8 +31,8 @@ def train(model:AbstractDeepONet, data:DataDeepONet, optimizer, n_iter:int):
         )
     losses = np.zeros(n_iter)
     with tqdm(range(n_iter)) as t:
-        for i in tqdm(range(n_iter)):
+        for i in t:
             model, state, loss = update_fn(model, data, optimizer, state)
             losses[i] = loss
-            t.set_description(f'Loss: {loss}')
+            t.set_description(f'Loss: {loss}\t')
     return model, losses

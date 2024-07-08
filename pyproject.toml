@@ -12,6 +12,7 @@ equinox = "^0.11.4"
 optax = "^0.2.2"
 tqdm = "^4.66.4"
 jaxtyping = "^0.2.31"
+interpax = "^0.3.3"
 
 
 [tool.poetry.group.extras.dependencies]
