@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "deeponetx"
+name = "examples"
 version = "0.1.0"
 description = ""
 authors = ["Shao-Ting Chiu <stchiu@email.tamu.edu>"]
@@ -7,16 +7,15 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-jax = {extras = ["cuda12"], version = "^0.4.30"}
-equinox = "^0.11.4"
-optax = "^0.2.2"
-tqdm = "^4.66.4"
-jaxtyping = "^0.2.31"
-
-
-[tool.poetry.group.extras.dependencies]
-pytest = "^8.2.2"
+deeponetx = {path = "../../deeponetx", develop = true}
+gstools = "^1.5.2"
+deepxde = "^1.11.1"
 matplotlib = "^3.9.1"
+scipy = "^1.14.0"
+diffrax = "^0.6.0"
+flax = "^0.8.5"
+ipykernel = "^6.29.5"
+jax = {extras = ["cuda12"], version = "^0.4.30"}
 
 
 [build-system]
