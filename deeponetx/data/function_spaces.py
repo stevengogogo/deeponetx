@@ -27,7 +27,7 @@ class FunctionSpace(eqx.Module):
 class GaussianRandomField(FunctionSpace):
     kernel: AbstractKernel
     xs: np.ndarray # sensor points
-    L: np.ndarray # covariance matrix
+    L: np.ndarray # lower choleksy decomp of covariance matrix
     dim: int # dimension of the function space
     N: int # number of sensor points
 

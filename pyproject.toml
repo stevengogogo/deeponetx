@@ -20,6 +20,8 @@ pytest = "^8.2.2"
 diffrax = "^0.6.0"
 gstools = "^1.5.2"
 scipy = "^1.14.0"
+deepxde = "^1.11.1"
+flax = "^0.8.5"
 
 
 [tool.poetry.group.dev.dependencies]
