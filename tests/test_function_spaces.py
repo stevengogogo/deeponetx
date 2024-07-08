@@ -11,6 +11,8 @@ def test_function_spaces():
     grf = fs.GaussianRandomField(k, x, jitter=1e-13)
     us = grf.sample(10, key=key)
 
+    assert us.shape == (10, 1000)
+
     # Visualization
     fig, ax = plt.subplots()
     for i in range(10):

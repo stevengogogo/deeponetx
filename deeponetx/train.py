@@ -5,7 +5,7 @@ import equinox as eqx
 from tqdm.auto import tqdm
 import numpy as np
 from .nn import AbstractDeepONet
-from data.data import DataDeepONet
+from .data.data import DataDeepONet
 
 def loss_fn(model:AbstractDeepONet, data:DataDeepONet):
 
