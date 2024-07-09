@@ -22,7 +22,12 @@ class DataDeepONet(NamedTuple):
         """Get subset of data
         """
         return DataDeepONet(self.input_branch[index], self.input_trunk, self.output[index])
-    
+        
+    def __len__(self):
+        """Length of data
+        """
+        return self.input_branch.shape[0]
+     
     def sample(self, batch_size:int, key):
         """Sample data
         """
