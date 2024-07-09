@@ -11,39 +11,33 @@ import numpy as np
 import diffrax as dfx
 import matplotlib.pyplot as plt
 from gstools import SRF, Gaussian
-from typing import NamedTuple
-import sys 
-import os
 import optax
-sys.path.append(".")
 import deeponetx as dtx
 from deeponetx import nn
 from deeponetx import train as traindtx
+from deeponetx.data import function_spaces, kernels
+from deeponetx.data.data import DataDeepONet
 
-def sample_grf1d(m, tspan, *, key:int):
-    model = Gaussian(dim=1, var=1, len_scale=10.)
-    ts = np.linspace(tspan[0], tspan[1], m)
-    srf = SRF(model, seed=key)
-    vs = srf.structured(range(m))
+def sample_grf1d(n_samp, ts, key:int):
+    kernel = kernels.SquaredExponential(length_scale=0.1, signal_stddev=1.)
+    model = function_spaces.GaussianRandomField(kernel, ts)
+    vs = model.sample(n_samp, key=key)
+    print(vs.shape)
     return vs
-    #Vfn = dfx.LinearInterpolation(ts, vs)
-    #return Vfn.evaluate
 
-def get_data(key=0):
+def get_data(key:jr.PRNGKey):
     """Create align data
     """
     m = 100 # resolution
-    tspan = [0.,1.]
+    ts = jnp.linspace(0, 1, num=m) # sensor points
     n_samp = 1150
-
-    Vs = jnp.array([sample_grf1d(m, tspan, key=i+key) for i in range(n_samp)])
+    Vs = sample_grf1d(n_samp, ts, key=key)
 
     def solve(vs):
         """Solve ODE for given GRF function
         """
         # Observe points
         v0 = 0. 
-        ts = jnp.linspace(tspan[0], tspan[1], len(vs))
         # interpolation
         vfn = dfx.LinearInterpolation(ts, vs).evaluate
 
@@ -55,7 +49,7 @@ def get_data(key=0):
         term = dfx.ODETerm(ode)
         solver = dfx.Dopri5()
         # solve
-        sol = dfx.diffeqsolve(term, solver, t0=tspan[0], t1=tspan[1], dt0=(tspan[1]-tspan[0])/m, y0=v0, saveat=dfx.SaveAt(ts=ts))
+        sol = dfx.diffeqsolve(term, solver, t0=ts[0], t1=ts[-1], dt0=(ts[1]-ts[0]), y0=v0, saveat=dfx.SaveAt(ts=ts))
 
         vs = vfn(ts)
 
@@ -63,9 +57,9 @@ def get_data(key=0):
     # Solve on VS
     sols, vs = jax.vmap(solve, in_axes=(0,))(Vs)
     ys = sols.ts[0].reshape(-1, 1)
-    return traindtx.DataDeepONet(vs, ys, sols.ys)
+    return DataDeepONet(vs, ys, sols.ys)
 
-def visualize(net:dtx.nn.AbstractDeepONet, data:dtx.train.DataDeepONet, i=0):
+def visualize(net:dtx.nn.AbstractDeepONet, data:DataDeepONet, i=0):
     fig, ax = plt.subplots()
     ax.plot(data.input_trunk[:,0], data.input_branch[i,:], label="input")
     ax.plot(data.input_trunk[:,i], data.output[i,:], label="Antiderivative (truth)" )
@@ -85,6 +79,7 @@ def vis_loss(losses:list):
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Traing Loss (MSE)")
     ax.set_title("Training Loss")
+    return fig, ax
 
 
 def main():
@@ -92,7 +87,7 @@ def main():
     key = jr.PRNGKey(0)
 
     # Create dta
-    data = get_data()
+    data = get_data(key)
     data_train = data[:500]
     data_test = data[500:]
 

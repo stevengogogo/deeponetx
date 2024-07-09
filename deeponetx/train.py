@@ -1,34 +1,23 @@
 import jax
 import jax.numpy as jnp
+import jax.random as jr
 import optax 
 import equinox as eqx
-from typing import NamedTuple
 from tqdm.auto import tqdm
 import numpy as np
 from .nn import AbstractDeepONet
+from .data.data import DataDeepONet
 
-class DataDeepONet(NamedTuple):
-    """Data for DeepONet
 
-    Args:
-        - `input_branch`: jnp.ndarray # conditioned function (sampled) [nsample, ngrid]
-        - `input_trunk`: jnp.ndarray # location y [nsample, locations]
-        - `output`: jnp.array # output of operator at location y [nsample, locations]
-    """
-    input_branch: jnp.ndarray
-    input_trunk: jnp.ndarray
-    output: jnp.array
-    def __getitem__(self, key):
-        """Get subset of data
-        """
-        return DataDeepONet(self.input_branch[key], self.input_trunk, self.output[key])
-
-def loss_fn(model:AbstractDeepONet, data:DataDeepONet):
-
-    preds = jax.vmap( 
+def predict(model:AbstractDeepONet, data:DataDeepONet):
+    return jax.vmap(
         jax.vmap(
             model, in_axes=(None, 0)), 
         in_axes=(0, None))(data.input_branch, data.input_trunk)
+
+def loss_fn(model:AbstractDeepONet, data:DataDeepONet):
+
+    preds = predict(model, data)
 
     mse = jnp.mean(jnp.square(preds - data.output))
     return mse
@@ -41,14 +30,16 @@ def update_fn(model:AbstractDeepONet, data, optimizer, state):
     return new_model, new_state, loss
 
 
-def train(model:AbstractDeepONet, data:DataDeepONet, optimizer, n_iter:int):
+def train(model:AbstractDeepONet, data:DataDeepONet, optimizer, n_iter:int, batch_size:int=None, key=jr.PRNGKey(0)):
     state = optimizer.init(
         eqx.filter(model, eqx.is_array)
         )
     losses = np.zeros(n_iter)
+    batch_size = len(data) if batch_size is None else batch_size
     with tqdm(range(n_iter)) as t:
-        for i in tqdm(range(n_iter)):
-            model, state, loss = update_fn(model, data, optimizer, state)
+        for i in t:
+            k_b, key = jax.random.split(key)
+            model, state, loss = update_fn(model, data.sample(batch_size, k_b), optimizer, state)
             losses[i] = loss
-            t.set_description(f'Loss: {loss}')
+            t.set_description(f'Loss: {loss}\t')
     return model, losses
