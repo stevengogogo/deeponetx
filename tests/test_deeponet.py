@@ -36,7 +36,7 @@ def test_training():
     
     # Create data
     input_branch, input_trunk, output = create_data(k_data)
-    data = train.DataDeepONet(input_branch, input_trunk, output)
+    data = train.DatasetDeepONet(input_branch, input_trunk, output, 64, key=k_data)
 
     # Train
     train.train(net, data, optax.adam(1e-3), 10)

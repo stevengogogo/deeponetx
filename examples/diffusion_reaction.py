@@ -142,7 +142,7 @@ P_train = 100 # number of output sensors
 n_batch = N * P_train
 
 u_train, y_train, s_train = generate_training_data(key, N, P_train)
-data = dtxdata.DataDeepONet(u_train, y_train, s_train)
+data = dtxdata.DatasetDeepONet(u_train, y_train, s_train)
 
 #%%
 

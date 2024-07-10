@@ -6,10 +6,10 @@ import equinox as eqx
 from tqdm.auto import tqdm
 import numpy as np
 from .nn import AbstractDeepONet
-from .data.data import DataDeepONet
+from .data.data import DatasetDeepONet, DataDeepONet
 
 
-def predict(model:AbstractDeepONet, data:DataDeepONet):
+def predict(model:AbstractDeepONet, data:DatasetDeepONet):
     return jax.vmap(
         jax.vmap(
             model, in_axes=(None, 0)), 
@@ -23,7 +23,7 @@ def loss_fn(model:AbstractDeepONet, data:DataDeepONet):
     return mse
 
 @eqx.filter_jit
-def update_fn(model:AbstractDeepONet, data, optimizer, state):
+def update_fn(model:AbstractDeepONet, data:DataDeepONet, optimizer, state):
     loss, grad = eqx.filter_value_and_grad(loss_fn)(model, data)
     updates, new_state = optimizer.update(grad, state, model)
     new_model = eqx.apply_updates(model, updates)
@@ -39,7 +39,7 @@ def train(model:AbstractDeepONet, data:DataDeepONet, optimizer, n_iter:int, batc
     with tqdm(range(n_iter)) as t:
         for i in t:
             k_b, key = jax.random.split(key)
-            model, state, loss = update_fn(model, data.sample(batch_size, k_b), optimizer, state)
+            model, state, loss = update_fn(model, data.sample(), optimizer, state)
             losses[i] = loss
             t.set_description(f'Loss: {loss}\t')
     return model, losses
