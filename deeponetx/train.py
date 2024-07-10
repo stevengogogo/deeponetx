@@ -30,16 +30,14 @@ def update_fn(model:AbstractDeepONet, data:DataDeepONet, optimizer, state):
     return new_model, new_state, loss
 
 
-def train(model:AbstractDeepONet, data:DataDeepONet, optimizer, n_iter:int, batch_size:int=None, key=jr.PRNGKey(0)):
+def train(model:AbstractDeepONet, dataloader:DataDeepONet, optimizer, n_iter:int):
     state = optimizer.init(
         eqx.filter(model, eqx.is_array)
         )
     losses = np.zeros(n_iter)
-    batch_size = len(data) if batch_size is None else batch_size
     with tqdm(range(n_iter)) as t:
         for i in t:
-            k_b, key = jax.random.split(key)
-            model, state, loss = update_fn(model, data.sample(), optimizer, state)
+            model, state, loss = update_fn(model, dataloader.sample(), optimizer, state)
             losses[i] = loss
             t.set_description(f'Loss: {loss}\t')
     return model, losses
