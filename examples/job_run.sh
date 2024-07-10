@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=deeponetx_examples
+#SBATCH --job-name=deeponetx_examples_diffusion
 #SBATCH --time=0-00:03:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -22,5 +22,5 @@ source activate gpjax
 
 # jobstats -t -s &
 #python ./main.py --device cuda --batch_size 2500 --data_dir $TMPDIR/data/061/train --test_dir $TMPDIR/data/061/test
-poetry run python antiderivative_1d.py
+poetry run python diffusion_reaction.py
 # jobstats
