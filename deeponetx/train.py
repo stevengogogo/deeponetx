@@ -31,13 +31,15 @@ def update_fn(model:AbstractDeepONet, data:DataDeepONet, optimizer, state):
 
 
 def train(model:AbstractDeepONet, dataloader:DataDeepONet, optimizer, n_iter:int):
+    data_iter = iter(dataloader)
     state = optimizer.init(
         eqx.filter(model, eqx.is_array)
         )
     losses = np.zeros(n_iter)
     with tqdm(range(n_iter)) as t:
         for i in t:
-            model, state, loss = update_fn(model, dataloader.sample(), optimizer, state)
+            batch = next(data_iter)
+            model, state, loss = update_fn(model, batch, optimizer, state)
             losses[i] = loss
             t.set_description(f'Loss: {loss}\t')
     return model, losses

@@ -31,7 +31,8 @@ class DatasetDeepONet(data.Dataset):
     def __getitem__(self, index):
         """Get subset of data
         """
-        return DataDeepONet(self.input_branch[index], self.input_trunk, self.output[index])
+        #return DataDeepONet(self.input_branch[index], self.input_trunk, self.output[index])
+        return self.sample()
         
     def __len__(self):
         """Length of data
@@ -42,5 +43,5 @@ class DatasetDeepONet(data.Dataset):
         """Sample data
         """
         self.key, key = jr.split(self.key)
-        idx = jr.choice(key, self.input_branch.shape[0], (self.batch_size,), replace=False)
-        return self[idx]
+        index = jr.choice(key, self.input_branch.shape[0], (self.batch_size,), replace=False)
+        return DataDeepONet(self.input_branch[index], self.input_trunk, self.output[index])
