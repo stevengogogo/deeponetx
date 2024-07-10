@@ -5,7 +5,6 @@ import jax
 import jax.numpy as jnp
 import abc 
 import jax.numpy as np
-import diffrax as dfx
 import equinox as eqx
 from jax.experimental import enable_x64
 from .kernels import AbstractKernel, cov_matrix
