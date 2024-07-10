@@ -16,7 +16,7 @@ import deeponetx as dtx
 from deeponetx import nn
 from deeponetx import train as traindtx
 from deeponetx.data import function_spaces, kernels
-from deeponetx.data.data import DataDeepONet
+from deeponetx.data.data import DatasetDeepONet
 
 def sample_grf1d(n_samp, ts, key:int):
     kernel = kernels.SquaredExponential(length_scale=0.1, signal_stddev=1.)
@@ -57,9 +57,9 @@ def get_data(key:jr.PRNGKey):
     # Solve on VS
     sols, vs = jax.vmap(solve, in_axes=(0,))(Vs)
     ys = sols.ts[0].reshape(-1, 1)
-    return DataDeepONet(vs, ys, sols.ys)
+    return DatasetDeepONet(vs, ys, sols.ys)
 
-def visualize(net:dtx.nn.AbstractDeepONet, data:DataDeepONet, i=0):
+def visualize(net:dtx.nn.AbstractDeepONet, data:DatasetDeepONet, i=0):
     fig, ax = plt.subplots()
     ax.plot(data.input_trunk[:,0], data.input_branch[i,:], label="input")
     ax.plot(data.input_trunk[:,i], data.output[i,:], label="Antiderivative (truth)" )

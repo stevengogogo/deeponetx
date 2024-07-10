@@ -6,8 +6,14 @@ import jax.numpy as jnp
 import jax.random as jr
 from typing import NamedTuple
 import abc 
+from torch.utils import data
 
 class DataDeepONet(NamedTuple):
+    input_branch:jnp.ndarray
+    input_trunk:jnp.ndarray
+    output:jnp.array
+
+class DatasetDeepONet(data.Dataset):
     """Data for DeepONet
 
     Args:
@@ -15,9 +21,13 @@ class DataDeepONet(NamedTuple):
         - `input_trunk`: jnp.ndarray # location y [nsample, locations]
         - `output`: jnp.array # output of operator at location y [nsample, locations]
     """
-    input_branch: jnp.ndarray # input sample
-    input_trunk: jnp.ndarray # location
-    output: jnp.array # labeled data evulated at y (solution measurements, BC/IC cond
+    def __init__(self, input_branch:jnp.ndarray, input_trunk:jnp.ndarray, output:jnp.array, batch_size:int, *,key:jr.PRNGKey):
+        self.input_branch = input_branch # input sample
+        self.input_trunk = input_trunk # location
+        self.output = output # labeled data evulated at y (solution measurements, BC/IC cond
+        self.batch_size = batch_size
+        self.key = key
+
     def __getitem__(self, index):
         """Get subset of data
         """
@@ -28,8 +38,9 @@ class DataDeepONet(NamedTuple):
         """
         return self.input_branch.shape[0]
      
-    def sample(self, batch_size:int, key):
+    def sample(self):
         """Sample data
         """
-        idx = jr.choice(key, self.input_branch.shape[0], (batch_size,), replace=False)
+        self.key, key = jr.split(self.key)
+        idx = jr.choice(key, self.input_branch.shape[0], (self.batch_size,), replace=False)
         return self[idx]

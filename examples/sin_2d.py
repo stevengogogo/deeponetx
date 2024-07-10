@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import deeponetx.data.function_spaces as fs 
 import deeponetx.data.kernels as kernels
 import deeponetx.nn as nn
-from deeponetx.data.data import DataDeepONet
+from deeponetx.data.data import DatasetDeepONet
 import deeponetx.train as traindtx
 from jaxtyping import Array, Float, Int, PyTree  # https://github.com/google/jaxtyping
 
@@ -44,7 +44,7 @@ def transform(us, Xs):
     u = us_fn(Xs[:,0], Xs[:,1]) # value at locations
     return operator(u)
 
-data = DataDeepONet(us.reshape(n_samp,1,m,m), X_.reshape(-1,2), jax.vmap(transform, in_axes=(0, None))(us, X_)) # [, 1D], [, 2D], [,1D]
+data = DatasetDeepONet(us.reshape(n_samp,1,m,m), X_.reshape(-1,2), jax.vmap(transform, in_axes=(0, None))(us, X_)) # [, 1D], [, 2D], [,1D]
 data_train, data_test = data[: n_samp //2], data[n_samp//2:]
 #%%
 print(data_train.input_branch.shape, data_train.input_trunk.shape, data_train.output.shape)
@@ -96,7 +96,7 @@ def visualize(data):
     ax.pcolormesh(data.input_trunk[:,0].reshape(m,m), data.input_trunk[:,1].reshape(m,m), data.output.reshape(m,m), shading='auto')
     return fig, ax
 
-data_pred =  DataDeepONet(data_test.input_branch, 
+data_pred =  DatasetDeepONet(data_test.input_branch, 
                           data_test.input_trunk, 
                           traindtx.predict(netopt, data_test).reshape(-1, m,m))
 
