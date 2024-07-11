@@ -19,18 +19,16 @@ class AbstractDeepONet(eqx.Module):
 class UnstackDeepONet(AbstractDeepONet):
     net_branch: eqx.Module
     net_trunk: eqx.Module
-    bias: jax.Array
 
-    def __init__(self, net_branch, net_trunk, bias):
+    def __init__(self, net_branch, net_trunk):
         self.net_branch = net_branch
         self.net_trunk = net_trunk
-        self.bias = bias
 
     def __call__(self, x_branch, x_trunk):
         out_branch = self.net_branch(x_branch)
         out_trunk = self.net_trunk(x_trunk)
-        inner_prod = jnp.sum(out_branch * out_trunk, keepdims=True)
-        return (inner_prod + self.bias)[0]
+        inner_prod = jnp.sum(out_branch * out_trunk)
+        return inner_prod
     
 
 def create_UnstackDeepONet1d_MLP(in_size_branch, width_size, depth, interact_size, activation, *, key):
