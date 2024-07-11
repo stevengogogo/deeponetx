@@ -124,9 +124,14 @@ net, losses = traindtx.train(net, data_train, optimizer, 10000)
 # visualize
 fig, ax = visualize(net, data_test, i = 0)
 fig2, ax2 = visualize(net, data_test, i = 1)
-fig3, ax3 = visualize(net, data_test, i = 1)
+fig3, ax3 = visualize(net, data_test, i = 2)
 fig4, ax4 = vis_loss(losses)
-ax.set_title("Test 0")
+
+# Save
+[f.savefig(n) for f, n in 
+ zip([fig, fig2, fig3, fig4], 
+ ["img/antiderivative_1d_test0.png", "img/antiderivative_1d_test1.png", 
+  "img/antiderivative_1d_test2.png", "img/antiderivative_1d_loss.png"])]
 
 
 # %%
