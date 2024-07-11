@@ -47,4 +47,4 @@ class DatasetDeepONet(data.Dataset):
         """Sample data
         """
         index = jr.choice(key, self.input_branch.shape[0], (self.batch_size,), replace=False)
-        return DataDeepONet(self.input_branch[index, :], self.input_trunk[index, :], self.output[index, :])
+        return DataDeepONet(self.input_branch[index], self.input_trunk[index], self.output[index])
