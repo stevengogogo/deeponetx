@@ -17,6 +17,10 @@ def test_data():
 
     dataiter = iter(data)
     ds = next(dataiter)
+    ds2 = next(dataiter)
     assert ds.input_branch.shape == (batch_size, 100) # branch
     assert ds.input_trunk.shape == (batch_size,1) # trunk
     assert ds.output.shape == (batch_size,100) # output
+    assert not jnp.allclose(ds.input_branch, ds2.input_branch)
+    assert not jnp.allclose(ds.input_trunk, ds2.input_trunk)
+    assert not jnp.allclose(ds.output, ds2.output)
