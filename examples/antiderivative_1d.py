@@ -103,7 +103,7 @@ key = jr.PRNGKey(0)
 m = 100 # resolution
 n_samp = 1150 
 train_size = 500
-batch_size = train_size 
+batch_size = 10000#train_size * 100
 data_train, data_test = get_data(key, n_samp, m, train_size, batch_size)
 
 # net setting
@@ -131,7 +131,4 @@ fig4, ax4 = vis_loss(losses)
 [f.savefig(n) for f, n in 
  zip([fig, fig2, fig3, fig4], 
  ["img/antiderivative_1d_test0.png", "img/antiderivative_1d_test1.png", 
-  "img/antiderivative_1d_test2.png", "img/antiderivative_1d_loss.png"])]
-
-
-# %%
+  "img/antiderivative_1d_test2.png", "img/antiderivative_1d_loss.png"])];
