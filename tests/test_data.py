@@ -9,15 +9,17 @@ def test_data():
     k_branch, k_trunk, k_output = jr.split(key, num=3)
 
     # Suppsoe a 2D funtion mapping with 1D initial 
-    input_branch = jr.normal(k_branch, shape=(150, 1))
-    input_trunk = jr.normal(k_trunk, shape=(150, 2))
-    output = jr.normal(k_output, shape=(150, 1))
+    input_branch = jr.normal(k_branch, shape=(150, 100))
+    input_trunk = jr.normal(k_trunk, shape=(100, 1))
+    output = jr.normal(k_output, shape=(150, 100))
     batch_size = 10
     data = DatasetDeepONet(input_branch, input_trunk, output, batch_size, key=key)
-    ds = data.sample()
-    assert data[0:10][0].shape == (10, 1) # branch
-    assert data[0:10][1].shape == (150, 2) # trunk 
-    assert data[0:10][2].shape == (10, 1) # output
-    assert ds[0].shape == (batch_size, 1) # branch
-    assert ds[1].shape == (150, 2) # trunk
-    assert ds[2].shape == (batch_size, 1) # branch
+
+    dataiter = iter(data)
+    ds = next(dataiter)
+    assert data[0:10][0].shape == (10, 100) # branch
+    assert data[0:10][1].shape == (100, 1) # trunk 
+    assert data[0:10][2].shape == (10, 100) # output
+    assert ds.input_branch.shape == (batch_size, 100) # branch
+    assert ds.input_trunk.shape == (100,1) # trunk
+    assert ds.output.shape == (batch_size,100) # output
