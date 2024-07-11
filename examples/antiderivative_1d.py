@@ -25,13 +25,12 @@ def sample_grf1d(n_samp, ts, key:int):
     print(vs.shape)
     return vs
 
-def get_data(key:jr.PRNGKey):
+def get_data(key:jr.PRNGKey, n_samp, m, train_size, batch_size):
     """Create align data
     """
-    m = 100 # resolution
+    k_d1, k_d2, k_s, k_c = jr.split(key, num=4)
     ts = jnp.linspace(0, 1, num=m) # sensor points
-    n_samp = 1150
-    Vs = sample_grf1d(n_samp, ts, key=key)
+    Vs = sample_grf1d(n_samp, ts, key=k_s)
 
     def solve(vs):
         """Solve ODE for given GRF function
@@ -56,8 +55,21 @@ def get_data(key:jr.PRNGKey):
         return sol, vs
     # Solve on VS
     sols, vs = jax.vmap(solve, in_axes=(0,))(Vs)
+    gu = sols.ys
     ys = sols.ts[0].reshape(-1, 1)
-    return DatasetDeepONet(vs, ys, sols.ys)
+
+    # Reshaping for betching 
+    vs_ = jnp.repeat(vs, m, axis=0)
+    ys_ = jnp.tile(ys, (n_samp,1))
+    gu_ = gu.ravel()
+
+
+    idx = jnp.arange(n_samp*m)#jr.permutation(k_c, n_samp*m)
+
+    # Construct dataloader
+    data_train = DatasetDeepONet(vs_[idx[:train_size]], ys_[idx[:train_size]], gu_[idx[:train_size]], batch_size, key=k_d1)
+    data_test = DatasetDeepONet(vs[idx[train_size:]], ys, gu[idx[train_size:]], batch_size, key=k_d2)
+    return data_train, data_test
 
 def visualize(net:dtx.nn.AbstractDeepONet, data:DatasetDeepONet, i=0):
     fig, ax = plt.subplots()
@@ -82,36 +94,40 @@ def vis_loss(losses:list):
     return fig, ax
 
 
-def main():
-    # Create key
-    key = jr.PRNGKey(0)
+# Create key
+key = jr.PRNGKey(0)
 
-    # Create dta
-    data = get_data(key)
-    data_train = data[:500]
-    data_test = data[500:]
+# Create dta
+m = 100 # resolution
+n_samp = 1150 
+train_size = 500 * m
+batch_size = train_size 
+data_train, data_test = get_data(key, n_samp, m, train_size, batch_size)
 
-    # net setting
-    width_size = 40 
-    depth = 1
-    interact_size = 40
-    activation = jax.nn.relu
-    optimizer = optax.adam(1e-3)
+print(data_train.input_branch.shape)
+print(data_train.input_trunk.shape)
+print(data_train.output.shape)
 
-    # Create net
-    in_size_branch = data.input_branch.shape[1]
-    net = dtx.nn.create_UnstackDeepONet1d_MLP(in_size_branch, width_size, depth, interact_size, activation, key=key)
+# net setting
+width_size = 40 
+depth = 1
+interact_size = 40
+activation = jax.nn.relu
+optimizer = optax.adam(1e-3)
 
-    # Training
-    net, losses = traindtx.train(net, data_train, optimizer, 10000)
+# Create net
+in_size_branch = data_train.input_branch.shape[1]
+net = dtx.nn.create_UnstackDeepONet1d_MLP(in_size_branch, width_size, depth, interact_size, activation, key=key)
 
-    # visualize
-    fig, ax = visualize(net, data_test, i = 0)
-    fig2, ax2 = visualize(net, data_test, i = 1)
-    fig3, ax3 = vis_loss(losses)
-    ax.set_title("Test 0")
+# Training
+net, losses = traindtx.train(net, data_train, optimizer, 10000)
 
-main()
+# visualize
+fig, ax = visualize(net, data_test, i = 0)
+fig2, ax2 = visualize(net, data_test, i = 1)
+fig3, ax3 = vis_loss(losses)
+ax.set_title("Test 0")
+
 
 
 
