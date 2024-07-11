@@ -16,7 +16,7 @@ def loss_fn(model:AbstractDeepONet, data:DataDeepONet):
 
     preds = predict(model, data)
 
-    mse = jnp.mean(jnp.square(preds - data.output))
+    mse = jnp.mean(jnp.square(preds.flatten() - data.output.flatten()))
     return mse
 
 @eqx.filter_jit
