@@ -16,8 +16,10 @@ import jax
 import optax
 import equinox as eqx
 import jax.numpy as jnp 
+from scipy.interpolate import griddata
+import matplotlib.pyplot as plt
 jax.config.update("jax_enable_x64", False)
-
+#%%
 # Use double precision to generate data (due to GP sampling)
 def RBF(x1, x2, params):
     output_scale, lengthscales = params
@@ -112,11 +114,24 @@ def generate_one_training_data(key, P):
 
     return u, y, s
 
+def generate_one_test_data(key, P):
+    Nx = P
+    Nt = P
+    (x, t, UU), (u, y, s) = solve_ADR(key, Nx , Nt, P, length_scale)
+
+    XX, TT = jnp.meshgrid(x, t)
+
+    u_test = jnp.tile(u, (P**2, 1))
+    y_test = jnp.hstack([XX.flatten()[:,None], TT.flatten()[:,None]])
+    s_test = UU.T.flatten()
+
+    return u_test, y_test, s_test
+
 # Geneate training data corresponding to N input sample
 def generate_training_data(key, N, P):
     config.update("jax_enable_x64", True)
     keys = random.split(key, N)
-    u_train, y_train, s_train= jax.vmap(generate_one_training_data, (0, None))(keys, P)
+    u_train, y_train, s_train= jax.vmap(generate_one_training_data, in_axes=(0, None))(keys, P)
 
     u_train = jnp.float32(u_train.reshape(N * P, -1))
     y_train = jnp.float32(y_train.reshape(N * P, -1))
@@ -124,6 +139,20 @@ def generate_training_data(key, N, P):
 
     config.update("jax_enable_x64", False)
     return u_train, y_train, s_train
+
+def generate_test_data(key, N, P):
+
+    config.update("jax_enable_x64", True)
+    keys = random.split(key, N)
+
+    u_test, y_test, s_test = jax.vmap(generate_one_test_data, in_axes=(0, None))(keys, P)
+
+    u_test = jnp.float32(u_test.reshape(N * P**2, -1))
+    y_test = jnp.float32(y_test.reshape(N * P**2, -1))
+    s_test = jnp.float32(s_test.reshape(N * P**2, -1))
+
+    config.update("jax_enable_x64", False)
+    return u_test, y_test, s_test
 
 key = random.PRNGKey(0)
 k_trunk, k_branch, k_bias, k_batch = random.split(key, 4)
@@ -166,10 +195,68 @@ net_trunk = eqx.nn.MLP(
 
 net = nn.UnstackDeepONet(net_branch, net_trunk)
 
-# %%
-# Training
-lr = optax.exponential_decay(1e-2, 2000, 0.9)
+#%%Training
+lr = optax.exponential_decay(1e-3, 2000, 0.9)
 opt = optax.adam(lr)
 netopt, losses = traindtx.train(net, data, opt, 120000)
+
+#%% Visualization
+
+#Plot for loss function
+plt.figure(figsize = (6,5))
+plt.plot(losses, lw=2)
+
+plt.xlabel('Iteration')
+plt.ylabel('Loss')
+plt.yscale('log')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# %%
+# Generate one test sample
+key = random.PRNGKey(12345)
+P_test = 100
+Nx = m
+u_test, y_test, s_test = generate_test_data(key, 1, P_test)
+
+# Predict
+s_pred = jax.vmap(netopt, in_axes=(0,0))(u_test, y_test)
+
+# Generate an uniform mesh
+x = jnp.linspace(0, 1, Nx)
+t = jnp.linspace(0, 1, Nt)
+XX, TT = jnp.meshgrid(x, t)
+
+# Grid data
+S_pred = griddata(y_test, s_pred.flatten(), (XX,TT), method='cubic')
+S_test = griddata(y_test, s_test.flatten(), (XX,TT), method='cubic')
+# %%
+# Plot
+fig = plt.figure(figsize=(18,5))
+plt.subplot(1,3,1)
+plt.pcolor(XX,TT, S_test, cmap='seismic')
+plt.colorbar()
+plt.xlabel('$x$')
+plt.ylabel('$t$')
+plt.title('Exact $s(x,t)$')
+plt.tight_layout()
+
+plt.subplot(1,3,2)
+plt.pcolor(XX,TT, S_pred, cmap='seismic')
+plt.colorbar()
+plt.xlabel('$x$')
+plt.ylabel('$t$')
+plt.title('Predict $s(x,t)$')
+plt.tight_layout()
+
+plt.subplot(1,3,3)
+plt.pcolor(XX,TT, S_pred - S_test, cmap='seismic')
+plt.colorbar()
+plt.xlabel('$x$')
+plt.ylabel('$t$')
+plt.title('Absolute error')
+plt.tight_layout()
+plt.show()
 
 # %%
