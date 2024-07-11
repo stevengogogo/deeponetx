@@ -7,6 +7,8 @@ import jax.random as jr
 from typing import NamedTuple
 import abc 
 from torch.utils import data
+import jax
+from functools import partial
 
 class DataDeepONet(NamedTuple):
     input_branch:jnp.ndarray
@@ -32,16 +34,17 @@ class DatasetDeepONet(data.Dataset):
         """Get subset of data
         """
         #return DataDeepONet(self.input_branch[index], self.input_trunk, self.output[index])
-        return self.sample()
+        self.key, subkey = jr.split(self.key)
+        return self.sample(subkey)
         
     def __len__(self):
         """Length of data
         """
         return self.input_branch.shape[0]
-     
-    def sample(self):
+    
+    @partial(jax.jit, static_argnums=(0,))
+    def sample(self, key):
         """Sample data
         """
-        self.key, key = jr.split(self.key)
         index = jr.choice(key, self.input_branch.shape[0], (self.batch_size,), replace=False)
-        return DataDeepONet(self.input_branch[index], self.input_trunk, self.output[index])
+        return DataDeepONet(self.input_branch[index], self.input_trunk[index], self.output[index])
