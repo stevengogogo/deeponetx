@@ -9,14 +9,14 @@ import numpy as np
 from jax import random
 import jax.numpy as jnp
 from jax import lax
-import jax 
+import jax.random as jr
 from jax import config
 import equinox as eqx
 import jax 
 import optax
 import equinox as eqx
 import jax.numpy as jnp 
-jax.config.update("jax_enable_x64", True)
+jax.config.update("jax_enable_x64", False)
 
 # Use double precision to generate data (due to GP sampling)
 def RBF(x1, x2, params):
@@ -27,7 +27,6 @@ def RBF(x1, x2, params):
     return output_scale * jnp.exp(-0.5 * r2)
 
 # A diffusion-reaction numerical solver
-m = 100
 def solve_ADR(key, Nx, Nt, P, length_scale):
     """Solve 1D
     u_t = (k(x) u_x)_x - v(x) u_x + g(u) + f(x)
@@ -136,13 +135,16 @@ length_scale = 0.2
 Nx = 100
 Nt = 100
 
-N = 500 # number of input samples
+N = 100 # number of input samples
 m = Nx   # number of input sensors
 P_train = 100 # number of output sensors
-n_batch = N * P_train
+n_batch = 1_0000
 
 u_train, y_train, s_train = generate_training_data(key, N, P_train)
-data = dtxdata.DatasetDeepONet(u_train, y_train, s_train, 1000, key=k_batch)
+
+
+
+data = dtxdata.DatasetDeepONet(u_train, y_train, s_train, n_batch, key=k_batch)
 
 #%%
 
@@ -150,23 +152,24 @@ net_branch = eqx.nn.MLP(
     in_size=m, 
     out_size= 50,
     width_size =50,
-    depth=5,
-    activation=jax.nn.relu,
+    depth=4,
+    activation=jax.nn.tanh,
     key= k_branch)
 net_trunk = eqx.nn.MLP(
     in_size=2, 
     out_size= 50,
     width_size =50,
-    depth=5,
-    activation=jax.nn.relu,
+    depth=4,
+    activation=jax.nn.tanh,
     key= k_trunk)
 
-bias = jax.random.uniform(k_bias, shape=(1,))
 
-net = nn.UnstackDeepONet(net_branch, net_trunk, bias)
+net = nn.UnstackDeepONet(net_branch, net_trunk)
 
 # %%
 # Training
-netopt, losses = traindtx.train(net, data, optax.adam(1e-2), 1000, batch_size=n_batch, key=k_batch)
+lr = optax.exponential_decay(1e-2, 2000, 0.9)
+opt = optax.adam(lr)
+netopt, losses = traindtx.train(net, data, opt, 120000)
 
 # %%
