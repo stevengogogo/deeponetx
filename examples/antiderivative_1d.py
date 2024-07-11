@@ -16,7 +16,7 @@ import deeponetx as dtx
 from deeponetx import nn
 from deeponetx import train as traindtx
 from deeponetx.data import function_spaces, kernels
-from deeponetx.data.data import DataDeepONet
+from deeponetx.data.data import DatasetDeepONet, DataDeepONet
 
 def sample_grf1d(n_samp, ts, key:int):
     kernel = kernels.SquaredExponential(length_scale=0.1, signal_stddev=1.)
@@ -25,13 +25,12 @@ def sample_grf1d(n_samp, ts, key:int):
     print(vs.shape)
     return vs
 
-def get_data(key:jr.PRNGKey):
+def get_data(key:jr.PRNGKey, n_samp, m, train_size, batch_size):
     """Create align data
     """
-    m = 100 # resolution
+    k_d1, k_d2, k_s, k_c = jr.split(key, num=4)
     ts = jnp.linspace(0, 1, num=m) # sensor points
-    n_samp = 1150
-    Vs = sample_grf1d(n_samp, ts, key=key)
+    Vs = sample_grf1d(n_samp, ts, key=k_s)
 
     def solve(vs):
         """Solve ODE for given GRF function
@@ -56,13 +55,28 @@ def get_data(key:jr.PRNGKey):
         return sol, vs
     # Solve on VS
     sols, vs = jax.vmap(solve, in_axes=(0,))(Vs)
+    gu = sols.ys
     ys = sols.ts[0].reshape(-1, 1)
-    return DataDeepONet(vs, ys, sols.ys)
 
-def visualize(net:dtx.nn.AbstractDeepONet, data:DataDeepONet, i=0):
+    # Reshaping for betching 
+    data_test = DataDeepONet(vs[train_size:], ys, gu[train_size:])
+
+    # Training data
+    vs_ = jnp.repeat(vs[:train_size], m, axis=0)
+    ys_ = jnp.tile(ys, (train_size,1))
+    gu_ = gu[:train_size].ravel()
+
+
+    idx = jnp.arange(n_samp*m)#jr.permutation(k_c, n_samp*m)
+
+    # Construct dataloader
+    data_train = DatasetDeepONet(vs_, ys_, gu_, batch_size, key=k_d1)
+    return data_train, data_test
+
+def visualize(net:dtx.nn.AbstractDeepONet, data:DatasetDeepONet, i=0):
     fig, ax = plt.subplots()
     ax.plot(data.input_trunk[:,0], data.input_branch[i,:], label="input")
-    ax.plot(data.input_trunk[:,i], data.output[i,:], label="Antiderivative (truth)" )
+    ax.plot(data.input_trunk[:,0], data.output[i,:], label="Antiderivative (truth)" )
     ax.plot(data.input_trunk[:,0], 
         jax.vmap(
             net, in_axes=(None, 0)
@@ -82,38 +96,39 @@ def vis_loss(losses:list):
     return fig, ax
 
 
-def main():
-    # Create key
-    key = jr.PRNGKey(0)
+# Create key
+key = jr.PRNGKey(0)
 
-    # Create dta
-    data = get_data(key)
-    data_train = data[:500]
-    data_test = data[500:]
+# Create dta
+m = 100 # resolution
+n_samp = 1150 
+train_size = 500
+batch_size = 10000#train_size * 100
+data_train, data_test = get_data(key, n_samp, m, train_size, batch_size)
 
-    # net setting
-    width_size = 40 
-    depth = 1
-    interact_size = 40
-    activation = jax.nn.relu
-    optimizer = optax.adam(1e-3)
+# net setting
+width_size = 40 
+depth = 1
+interact_size = 40
+activation = jax.nn.relu
+optimizer = optax.adam(1e-3)
 
-    # Create net
-    in_size_branch = data.input_branch.shape[1]
-    net = dtx.nn.create_UnstackDeepONet1d_MLP(in_size_branch, width_size, depth, interact_size, activation, key=key)
+# Create net
+in_size_branch = data_train.input_branch.shape[1]
+net = dtx.nn.create_UnstackDeepONet1d_MLP(in_size_branch, width_size, depth, interact_size, activation, key=key)
 
-    # Training
-    net, losses = traindtx.train(net, data_train, optimizer, 10000)
+# Training
+net, losses = traindtx.train(net, data_train, optimizer, 10000)
 
-    # visualize
-    fig, ax = visualize(net, data_test, i = 0)
-    fig2, ax2 = visualize(net, data_test, i = 1)
-    fig3, ax3 = vis_loss(losses)
-    ax.set_title("Test 0")
+#%%
+# visualize
+fig, ax = visualize(net, data_test, i = 0)
+fig2, ax2 = visualize(net, data_test, i = 1)
+fig3, ax3 = visualize(net, data_test, i = 2)
+fig4, ax4 = vis_loss(losses)
 
-main()
-
-
-
-
-# %%
+# Save
+[f.savefig(n) for f, n in 
+ zip([fig, fig2, fig3, fig4], 
+ ["img/antiderivative_1d_test0.png", "img/antiderivative_1d_test1.png", 
+  "img/antiderivative_1d_test2.png", "img/antiderivative_1d_loss.png"])];

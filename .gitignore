@@ -25,7 +25,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
+examples/img
+!examples/img/.gitkeep
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -163,3 +164,5 @@ cython_debug/
 #.idea/
 .vscode
 tests/img/
+examples/logs
+.pytest_cache
