@@ -1869,6 +1869,16 @@ files = [
 ]
 
 [[package]]
+name = "wget"
+version = "3.2"
+description = "pure python download utility"
+optional = false
+python-versions = "*"
+files = [
+    {file = "wget-3.2.zip", hash = "sha256:35e630eca2aa50ce998b9b1a127bb26b30dfee573702782aa982f875e3f16061"},
+]
+
+[[package]]
 name = "zipp"
 version = "3.19.2"
 description = "Backport of pathlib-compatible object wrapper for zip files"
@@ -1886,4 +1896,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "e88573a2b895f7f64dee8c4433356113ca7882db0d8950db7213d24ff89cb0ba"
+content-hash = "81afdd136c82bc19301bf408c5e41cc6f7d1ce1b72140022320d8eaf6abd9cfa"

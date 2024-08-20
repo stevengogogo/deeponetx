@@ -166,3 +166,5 @@ cython_debug/
 tests/img/
 examples/logs
 .pytest_cache
+examples/data/*
+!examples/data/.gitkeep
