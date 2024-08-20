@@ -124,23 +124,19 @@ net_trunk_opt, A_opt, losses1 = train_step_1(net_trunk, A, data, optax.adam(1e-4
 net_branch_opt, T = train_step_2(net_branch, net_trunk_opt, A_opt, data, optax.adam(1e-4), 10000)
 # %%
 
-t_trunk = lambda x: A_opt.T @ net_trunk(x)
 def deeponet(input_branch, input_trunk):
+    out_branch = net_branch_opt(input_branch)
+    out_trunk = net_trunk_opt(input_trunk)
+    out_trunk_reparam = out_trunk @ T
+    return jnp.sum(out_trunk_reparam * out_branch)
 
-    return net_branch_opt(input_branch), net_trunk_opt(input_trunk)
-
-#%% Validation
+# Validation
 dataset_test = jnp.load("data/antiderivative_aligned_test.npz", allow_pickle=True)
 branch_inputs_test = dataset_test["X"][0]
 trunk_inputs_test = dataset_test["X"][1]
 outputs_test = dataset_test["y"]
 
-output_branch, output_trunk = jax.vmap(
-        deeponet,
-        in_axes=(None, 0)
-    )(branch_inputs_test[0, :], trunk_inputs_test)
 
-pred = jnp.sum((output_trunk @ A_opt) * output_branch, axis=0)
 
 plt.plot(
     trunk_inputs_test[:, 0],
@@ -154,7 +150,10 @@ plt.plot(
 )
 plt.plot(
     trunk_inputs_test[:, 0],
-    deeponet(branch_inputs_test[0, :], trunk_inputs_test[:, 0]),
+    jax.vmap(
+        deeponet,
+        in_axes=(None, 0)
+    )(branch_inputs_test[0, :], trunk_inputs_test),
     label="prediction",
 )
 plt.legend()
