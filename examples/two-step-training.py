@@ -72,7 +72,7 @@ def train_step_2(net_branch, net_trunk, A, data, optimizer, n_iter:int):
             losses[i] = loss
             t.set_description(f'Loss: {loss}\t')
 
-    return net_branch
+    return net_branch, jnp.linalg.inv(R)
 
 
 
@@ -121,11 +121,12 @@ net_trunk = eqx.nn.MLP(
 A = jr.normal(k_T, (N, K))
 
 net_trunk_opt, A_opt, losses1 = train_step_1(net_trunk, A, data, optax.adam(1e-4), 10000)
-net_branch_opt = train_step_2(net_branch, net_trunk_opt, A_opt, data, optax.adam(1e-4), 10000)
+net_branch_opt, T = train_step_2(net_branch, net_trunk_opt, A_opt, data, optax.adam(1e-4), 10000)
 # %%
 
-
+t_trunk = lambda x: A_opt.T @ net_trunk(x)
 def deeponet(input_branch, input_trunk):
+
     return net_branch_opt(input_branch), net_trunk_opt(input_trunk)
 
 #%% Validation
