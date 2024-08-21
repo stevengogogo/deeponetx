@@ -41,3 +41,28 @@ def train(model:AbstractDeepONet, dataloader:DatasetDeepONet, optimizer, n_iter:
             losses[i] = loss
             t.set_description(f'Loss: {loss}\t')
     return model, losses
+
+def traing_two_step(model:AbstractDeepONet, dataloader:DatasetDeepONet, optimizer, n_iter:int):
+    data_iter = iter(dataloader)
+    state = optimizer.init(
+        eqx.filter(model, eqx.is_array)
+        )
+    losses = np.zeros(n_iter)
+    batch = next(data_iter)
+    N = batch.input_branch.shape[0]
+    K = batch.input_branch.shape[1]
+    my = batch.input_trunk.shape[0]
+    
+    with tqdm(range(n_iter)) as t:
+        for i in t:
+            batch = next(data_iter)
+            model, state, loss = update_fn(model, batch, optimizer, state)
+            losses[i] = loss
+            t.set_description(f'Loss: {loss}\t')
+    return model, losses
+
+
+def loss(model:AbstractDeepONet, data:DataDeepONet):
+    preds = predict(model, data)
+    mse = jnp.mean(jnp.square(preds.flatten() - data.output.flatten()))
+    return mse

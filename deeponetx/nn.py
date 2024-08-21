@@ -8,13 +8,26 @@ class AbstractDeepONet(eqx.Module):
     net_trunk: eqx.Module
 
     @abc.abstractmethod
-    def __init__():
+    def __init__(self):
         raise NotImplementedError 
     
     @abc.abstractmethod
-    def __call__():
+    def __call__(self, x_branch, x_trunk):
         raise NotImplementedError
     
+class GeneralizedDeepONet(eqx.Module):
+    """
+    Reparameterization of deeponet by Two step training
+    https://arxiv.org/abs/2309.01020
+    """
+    deeponet: AbstractDeepONet
+    A: jnp.ndarray
+    def __call__(self, x_branch, x_trunk):
+        out_trunk = self.deeponet.net_trunk(x_trunk)
+        out_trunk_orh = out_trunk  @ self.A # orthogonal reparameterization
+        out_branch = self.deeponet.net_branch(x_branch)
+        inner_prod = jnp.sum(out_branch * out_trunk_orh)
+        return inner_prod
 
 class UnstackDeepONet(AbstractDeepONet):
     net_branch: eqx.Module

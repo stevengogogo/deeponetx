@@ -11,9 +11,9 @@ import jax
 from functools import partial
 
 class DataDeepONet(NamedTuple):
-    input_branch:jnp.ndarray
-    input_trunk:jnp.ndarray
-    output:jnp.array
+    input_branch:jnp.ndarray #[nsample, ngrid]
+    input_trunk:jnp.ndarray #[nsample, locations]
+    output:jnp.array #[nsample, locations]
 
 class DatasetDeepONet(data.Dataset):
     """Data for DeepONet
